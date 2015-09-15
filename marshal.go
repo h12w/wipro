@@ -135,6 +135,8 @@ func marshalValue(w io.Writer, name string, typ *gengo.Type) {
 		switch typ.Get("array_prefix").(string) {
 		case "length":
 			marshalLengthArray(w, name, typ)
+		case "size":
+			marshalSizeArray(w, name, typ)
 		}
 	default:
 		fpl(w, "// value %s %v", name, typ.Kind)
@@ -161,15 +163,12 @@ func unmarshalValue(w io.Writer, name string, typ *gengo.Type, declType string) 
 			unmarshalUnmarshaler(w, name, typ.Ident)
 		}
 	case gengo.ArrayKind:
-		fpl(w, "%s = make([]%s, int(r.ReadInt32()))", name, typ.Ident)
-		fpl(w, "for i := range %s {", name)
-		switch typ.Ident {
-		case "int8", "int16", "int32", "int64", "string":
-			unmarshalValue(w, name+"[i]", &gengo.Type{Kind: gengo.IdentKind, Ident: typ.Ident}, typ.Ident)
-		default:
-			unmarshalUnmarshaler(w, name+"[i]", typ.Ident)
+		switch typ.Get("array_prefix").(string) {
+		case "length":
+			unmarshalLengthArray(w, name, typ)
+		case "size":
+			unmarshalSizeArray(w, name, typ)
 		}
-		fpl(w, "}")
 	default:
 		fpl(w, "// value %s %v", name, typ.Kind)
 	}
@@ -183,6 +182,46 @@ func marshalLengthArray(w io.Writer, name string, typ *gengo.Type) {
 		marshalValue(w, name+"[i]", &gengo.Type{Kind: gengo.IdentKind, Ident: typ.Ident})
 	default:
 		marshalMarshaler(w, name+"[i]")
+	}
+	fpl(w, "}")
+}
+
+func unmarshalLengthArray(w io.Writer, name string, typ *gengo.Type) {
+	fpl(w, "%s = make([]%s, int(r.ReadInt32()))", name, typ.Ident)
+	fpl(w, "for i := range %s {", name)
+	switch typ.Ident {
+	case "int8", "int16", "int32", "int64", "string":
+		unmarshalValue(w, name+"[i]", &gengo.Type{Kind: gengo.IdentKind, Ident: typ.Ident}, typ.Ident)
+	default:
+		unmarshalUnmarshaler(w, name+"[i]", typ.Ident)
+	}
+	fpl(w, "}")
+}
+
+func marshalSizeArray(w io.Writer, name string, typ *gengo.Type) {
+	fpl(w, "offset := len(w.B)")
+	fpl(w, "w.WriteInt32(0)")
+	fpl(w, "start := len(w.B)")
+	fpl(w, "for i := range %s {", name)
+	switch typ.Ident {
+	case "int8", "int16", "int32", "int64", "string":
+		marshalValue(w, name+"[i]", &gengo.Type{Kind: gengo.IdentKind, Ident: typ.Ident})
+	default:
+		marshalMarshaler(w, name+"[i]")
+	}
+	fpl(w, "}")
+	fpl(w, "w.SetInt32(offset, int32(len(w.B)-start))")
+}
+
+func unmarshalSizeArray(w io.Writer, name string, typ *gengo.Type) {
+	fpl(w, "size := int(r.ReadInt32())")
+	fpl(w, "start := r.Offset")
+	fpl(w, "for r.Offset-start < size {")
+	switch typ.Ident {
+	case "int8", "int16", "int32", "int64", "string":
+		unmarshalValue(w, name+"[i]", &gengo.Type{Kind: gengo.IdentKind, Ident: typ.Ident}, typ.Ident)
+	default:
+		unmarshalUnmarshaler(w, name+"[i]", typ.Ident)
 	}
 	fpl(w, "}")
 }
