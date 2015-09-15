@@ -217,12 +217,14 @@ func unmarshalSizeArray(w io.Writer, name string, typ *gengo.Type) {
 	fpl(w, "size := int(r.ReadInt32())")
 	fpl(w, "start := r.Offset")
 	fpl(w, "for r.Offset-start < size {")
+	fpl(w, "var m %s", typ.Ident)
 	switch typ.Ident {
 	case "int8", "int16", "int32", "int64", "string":
-		unmarshalValue(w, name+"[i]", &gengo.Type{Kind: gengo.IdentKind, Ident: typ.Ident}, typ.Ident)
+		unmarshalValue(w, "m", &gengo.Type{Kind: gengo.IdentKind, Ident: typ.Ident}, typ.Ident)
 	default:
-		unmarshalUnmarshaler(w, name+"[i]", typ.Ident)
+		unmarshalUnmarshaler(w, "m", typ.Ident)
 	}
+	fpl(w, "*t = append(*t, m)")
 	fpl(w, "}")
 }
 
