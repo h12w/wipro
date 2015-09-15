@@ -59,7 +59,7 @@ func tokenize(def string) []string {
 	var token []rune
 	for _, c := range def {
 		switch c {
-		case '(', ')', '[', ']', '|', ' ':
+		case '(', ')', '<', '>', '[', ']', '|', ' ':
 			if len(token) > 0 {
 				tokens = append(tokens, string(token))
 				token = nil
@@ -112,11 +112,15 @@ func parseSpec(def string) (node *Node) {
 			s.push(n)
 		case ")":
 			s.pop()
-		case "[":
-			n := &Node{NodeType: ZeroOrMoreNode}
+		case "[", "<":
+			nodeType := LengthArrayNode
+			if token == "<" {
+				nodeType = SizeArrayNode
+			}
+			n := &Node{NodeType: nodeType}
 			top.Child = append(top.Child, n)
 			s.push(n)
-		case "]":
+		case "]", ">":
 			s.pop()
 		case "|":
 			top.NodeType = OrNode

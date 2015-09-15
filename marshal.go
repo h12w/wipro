@@ -24,7 +24,7 @@ func FromBNFToGoFuncs() {
 }
 
 func genMarshalFunc(w io.Writer, decl *gengo.TypeDecl) {
-	t := decl.Type
+	t := &decl.Type
 	if t.Kind == gengo.IdentKind && t.Ident == "T" {
 		return
 	}
@@ -49,9 +49,9 @@ func genMarshalFunc(w io.Writer, decl *gengo.TypeDecl) {
 			}
 		}
 	case gengo.ArrayKind:
-		marshalValue(w, "(*t)", t.Kind, t.Ident)
+		marshalValue(w, "(*t)", t)
 	case gengo.IdentKind:
-		marshalValue(w, "(*t)", t.Kind, t.Ident)
+		marshalValue(w, "(*t)", t)
 	default:
 		fpl(w, "// type %s, %v", decl.Name, decl.Type)
 	}
@@ -59,7 +59,7 @@ func genMarshalFunc(w io.Writer, decl *gengo.TypeDecl) {
 }
 
 func genUnmarshalFunc(w io.Writer, decl *gengo.TypeDecl) {
-	t := decl.Type
+	t := &decl.Type
 	if t.Kind == gengo.IdentKind && t.Ident == "T" {
 		return
 	}
@@ -87,9 +87,9 @@ func genUnmarshalFunc(w io.Writer, decl *gengo.TypeDecl) {
 			}
 		}
 	case gengo.ArrayKind:
-		unmarshalValue(w, "(*t)", t.Kind, t.Ident, t.Ident)
+		unmarshalValue(w, "(*t)", t, t.Ident)
 	case gengo.IdentKind:
-		unmarshalValue(w, "(*t)", t.Kind, t.Ident, decl.Name)
+		unmarshalValue(w, "(*t)", t, decl.Name)
 	default:
 		fpl(w, "// type %s, %v", decl.Name, decl.Type)
 	}
@@ -101,7 +101,7 @@ func marshalField(w io.Writer, f *gengo.Field) {
 	if f.Name == "" {
 		fName = "t." + f.Type.Ident
 	}
-	marshalValue(w, fName, f.Type.Kind, f.Type.Ident)
+	marshalValue(w, fName, &f.Type)
 }
 
 func unmarshalField(w io.Writer, f *gengo.Field) {
@@ -109,13 +109,13 @@ func unmarshalField(w io.Writer, f *gengo.Field) {
 	if f.Name == "" {
 		fName = "t." + f.Type.Ident
 	}
-	unmarshalValue(w, fName, f.Type.Kind, f.Type.Ident, f.Type.Ident)
+	unmarshalValue(w, fName, &f.Type, f.Type.Ident)
 }
 
-func marshalValue(w io.Writer, name string, kind gengo.Kind, typ string) {
-	switch kind {
+func marshalValue(w io.Writer, name string, typ *gengo.Type) {
+	switch typ.Kind {
 	case gengo.IdentKind:
-		switch typ {
+		switch typ.Ident {
 		case "int64":
 			marshalInt(w, name, 64)
 		case "int32":
@@ -132,24 +132,19 @@ func marshalValue(w io.Writer, name string, kind gengo.Kind, typ string) {
 			marshalMarshaler(w, name)
 		}
 	case gengo.ArrayKind:
-		marshalInt(w, fmt.Sprintf("int32(len(%s))", name), 32)
-		fpl(w, "for i := range %s {", name)
-		switch typ {
-		case "int8", "int16", "int32", "int64", "string":
-			marshalValue(w, name+"[i]", gengo.IdentKind, typ)
-		default:
-			marshalMarshaler(w, name+"[i]")
+		switch typ.Get("array_prefix").(string) {
+		case "length":
+			marshalLengthArray(w, name, typ)
 		}
-		fpl(w, "}")
 	default:
-		fpl(w, "// value %s %v", name, kind)
+		fpl(w, "// value %s %v", name, typ.Kind)
 	}
 }
 
-func unmarshalValue(w io.Writer, name string, kind gengo.Kind, typ, declType string) {
-	switch kind {
+func unmarshalValue(w io.Writer, name string, typ *gengo.Type, declType string) {
+	switch typ.Kind {
 	case gengo.IdentKind:
-		switch typ {
+		switch typ.Ident {
 		case "int64":
 			unmarshalInt(w, name, "b", 64)
 		case "int32":
@@ -163,21 +158,33 @@ func unmarshalValue(w io.Writer, name string, kind gengo.Kind, typ, declType str
 		case "[]byte":
 			fpl(w, "%s = r.ReadBytes()", name)
 		default:
-			unmarshalUnmarshaler(w, name, typ)
+			unmarshalUnmarshaler(w, name, typ.Ident)
 		}
 	case gengo.ArrayKind:
-		fpl(w, "%s = make([]%s, int(r.ReadInt32()))", name, typ)
+		fpl(w, "%s = make([]%s, int(r.ReadInt32()))", name, typ.Ident)
 		fpl(w, "for i := range %s {", name)
-		switch typ {
+		switch typ.Ident {
 		case "int8", "int16", "int32", "int64", "string":
-			unmarshalValue(w, name+"[i]", gengo.IdentKind, typ, typ)
+			unmarshalValue(w, name+"[i]", &gengo.Type{Kind: gengo.IdentKind, Ident: typ.Ident}, typ.Ident)
 		default:
-			unmarshalUnmarshaler(w, name+"[i]", typ)
+			unmarshalUnmarshaler(w, name+"[i]", typ.Ident)
 		}
 		fpl(w, "}")
 	default:
-		fpl(w, "// value %s %v", name, kind)
+		fpl(w, "// value %s %v", name, typ.Kind)
 	}
+}
+
+func marshalLengthArray(w io.Writer, name string, typ *gengo.Type) {
+	marshalInt(w, fmt.Sprintf("int32(len(%s))", name), 32)
+	fpl(w, "for i := range %s {", name)
+	switch typ.Ident {
+	case "int8", "int16", "int32", "int64", "string":
+		marshalValue(w, name+"[i]", &gengo.Type{Kind: gengo.IdentKind, Ident: typ.Ident})
+	default:
+		marshalMarshaler(w, name+"[i]")
+	}
+	fpl(w, "}")
 }
 
 func marshalMarshaler(w io.Writer, marshaler string) {

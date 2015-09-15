@@ -6,7 +6,8 @@ const (
 	LeafNode NodeType = iota
 	SeqNode
 	OrNode
-	ZeroOrMoreNode
+	LengthArrayNode
+	SizeArrayNode
 )
 
 func (t NodeType) MarshalText() ([]byte, error) {
@@ -17,7 +18,7 @@ func (t NodeType) MarshalText() ([]byte, error) {
 		return []byte(" "), nil
 	case OrNode:
 		return []byte("|"), nil
-	case ZeroOrMoreNode:
+	case LengthArrayNode:
 		return []byte("*"), nil
 	}
 	return nil, nil

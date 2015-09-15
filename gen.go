@@ -67,7 +67,7 @@ func (n *Node) GenType(m map[string]*Decl) *gengo.Type {
 				Fields: fields,
 			}
 		}
-	case ZeroOrMoreNode:
+	case LengthArrayNode, SizeArrayNode:
 		var t *gengo.Type
 		if len(n.Child) == 1 {
 			t = n.Child[0].GenType(m)
@@ -75,6 +75,12 @@ func (n *Node) GenType(m map[string]*Decl) *gengo.Type {
 			t = (&Node{NodeType: SeqNode, Child: n.Child}).GenType(m)
 		}
 		t.Kind = gengo.ArrayKind
+		switch n.NodeType {
+		case LengthArrayNode:
+			t.Set("array_prefix", "length")
+		case SizeArrayNode:
+			t.Set("array_prefix", "size")
+		}
 		return t
 	case OrNode:
 		return &gengo.Type{
@@ -99,9 +105,8 @@ func (d *Decl) GenDecl(m map[string]*Decl) *gengo.TypeDecl {
 		}
 	}
 	return &gengo.TypeDecl{
-		Name:           goName(d.Name),
-		Type:           *d.Type.GenType(m),
-		UnderlyingType: ut,
+		Name: goName(d.Name),
+		Type: *d.Type.GenType(m),
 	}
 }
 
@@ -118,12 +123,12 @@ func (d *Decl) typeName() string {
 func (n *Node) GenField(m map[string]*Decl) *gengo.Field {
 	name := n.Value
 	decl, _ := m[name]
-	if name == "" && n.NodeType == ZeroOrMoreNode && len(n.Child) == 1 {
+	if name == "" && n.NodeType == LengthArrayNode && len(n.Child) == 1 {
 		name = n.Child[0].Value + "s"
 	}
-	if decl != nil && n.NodeType == ZeroOrMoreNode {
+	if decl != nil && n.NodeType == LengthArrayNode {
 		goType := decl.Type.GenType(m)
-		if n.NodeType == ZeroOrMoreNode {
+		if n.NodeType == LengthArrayNode {
 			goType.Kind = gengo.ArrayKind
 		}
 		return &gengo.Field{
