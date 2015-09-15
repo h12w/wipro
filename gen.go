@@ -40,7 +40,7 @@ func (n *Node) simple() bool {
 		return false
 	}
 	switch n.Child[0].Value {
-	case "string", "int8", "int16", "int32", "int64", "bytes":
+	case "string", "bytes", "int8", "int16", "int32", "int64", "uint8", "uint16", "uint32", "uint64":
 		return true
 	}
 	return false

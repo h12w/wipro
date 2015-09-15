@@ -73,11 +73,11 @@ func genUnmarshalFunc(w io.Writer, decl *gengo.TypeDecl) {
 			unmarshalField(w, t.Fields[1])
 			switch f0.Name {
 			case "Size":
-				fpl(w, "if int(t.Size) != r.Offset-start {")
+				fpl(w, "if r.Err == nil && int(t.Size) != r.Offset-start {")
 				fpl(w, `r.Err = newError("size mismatch, expect %%d, got %%d", int(t.Size), r.Offset-start)`)
 				fpl(w, "}")
 			case "CRC":
-				fpl(w, "if uint32(t.CRC) != crc32.ChecksumIEEE(r.B[start:]) {")
+				fpl(w, "if r.Err == nil && t.CRC != crc32.ChecksumIEEE(r.B[start:r.Offset]) {")
 				fpl(w, `r.Err = newError("CRC mismatch")`)
 				fpl(w, "}")
 			}
@@ -124,6 +124,14 @@ func marshalValue(w io.Writer, name string, typ *gengo.Type) {
 			marshalInt(w, name, 16)
 		case "int8":
 			marshalInt(w, name, 8)
+		case "uint64":
+			marshalUint(w, name, 64)
+		case "uint32":
+			marshalUint(w, name, 32)
+		case "uint16":
+			marshalUint(w, name, 16)
+		case "uint8":
+			marshalUint(w, name, 8)
 		case "string":
 			fpl(w, "w.WriteString(string(%s))", name)
 		case "[]byte":
@@ -155,6 +163,14 @@ func unmarshalValue(w io.Writer, name string, typ *gengo.Type, declType string) 
 			unmarshalInt(w, name, "b", 16)
 		case "int8":
 			unmarshalInt(w, name, "b", 8)
+		case "uint64":
+			unmarshalUint(w, name, "b", 64)
+		case "uint32":
+			unmarshalUint(w, name, "b", 32)
+		case "uint16":
+			unmarshalUint(w, name, "b", 16)
+		case "uint8":
+			unmarshalUint(w, name, "b", 8)
 		case "string":
 			fpl(w, "%s = %s(r.ReadString())", name, declType)
 		case "[]byte":
@@ -224,6 +240,9 @@ func unmarshalSizeArray(w io.Writer, name string, typ *gengo.Type) {
 	default:
 		unmarshalUnmarshaler(w, "m", typ.Ident)
 	}
+	fpl(w, "if r.Err != nil {")
+	fpl(w, "return")
+	fpl(w, "}")
 	fpl(w, "*t = append(*t, m)")
 	fpl(w, "}")
 }
@@ -244,52 +263,10 @@ func unmarshalInt(w io.Writer, name string, bufName string, bit int) {
 	fpl(w, "%s=r.ReadInt%d()", name, bit)
 }
 
-func writeBytes(w io.Writer, bytes string) {
-	fpl(w, "if _, err := w.Write(%s); err != nil {", bytes)
-	fpl(w, "return err")
-	fpl(w, "}")
+func marshalUint(w io.Writer, name string, bit int) {
+	fpl(w, "w.WriteUint%d(%s)", bit, name)
 }
 
-func readBytes(w io.Writer, name string, l string) {
-	fpl(w, "%s := make([]byte, %s)", name, l)
-	fpl(w, "if _, err := r.Read(%s); err != nil {", name)
-	fpl(w, "return err")
-	fpl(w, "}")
-}
-
-func readByteArray(w io.Writer, name string, bit int) {
-	fpl(w, "var %s [%d]byte", name, bit/8)
-	fpl(w, "if _, err := r.Read(%s[:]); err != nil {", name)
-	fpl(w, "return err")
-	fpl(w, "}")
-}
-
-func intToBytes(name string, bit int) string {
-	switch bit {
-	case 64:
-		return fmt.Sprintf("[]byte{byte(%[1]s>>56), byte(%[1]s>>48), byte(%[1]s>>40), byte(%[1]s)>>32, "+
-			"byte(%[1]s>>24), byte(%[1]s>>16), byte(%[1]s>>8), byte(%[1]s)}", name)
-	case 32:
-		return fmt.Sprintf("[]byte{byte(%[1]s>>24), byte(%[1]s>>16), byte(%[1]s>>8), byte(%[1]s)}", name)
-	case 16:
-		return fmt.Sprintf("[]byte{byte(%[1]s>>8), byte(%[1]s)}", name)
-	case 8:
-		return fmt.Sprintf("[]byte{byte(%[1]s)}", name)
-	}
-	return ""
-}
-
-func bytesToInt(name string, bit int) string {
-	switch bit {
-	case 64:
-		return fmt.Sprintf("int64(%[1]s[0])<<56 | int64(%[1]s[1])<<48 | int64(%[1]s[2])<<40 | int64(%[1]s[3])<<32 | "+
-			"int64(%[1]s[4])<<24 | int64(%[1]s[5])<<16 | int64(%[1]s[6])<<8 | int64(%[1]s[7])", name)
-	case 32:
-		return fmt.Sprintf("int32(%[1]s[0])<<24 | int32(%[1]s[1])<<16 | int32(%[1]s[2])<<8 | int32(%[1]s[3])", name)
-	case 16:
-		return fmt.Sprintf("int16(%[1]s[0])<<8 | int16(%[1]s[1])", name)
-	case 8:
-		return fmt.Sprintf("int8(%[1]s[0])", name)
-	}
-	return ""
+func unmarshalUint(w io.Writer, name string, bufName string, bit int) {
+	fpl(w, "%s=r.ReadUint%d()", name, bit)
 }
