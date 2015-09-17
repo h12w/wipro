@@ -1,5 +1,9 @@
 package wipro
 
+import (
+	"h12.me/gengo"
+)
+
 type NodeType int
 
 const (
@@ -33,4 +37,10 @@ type Node struct {
 type Decl struct {
 	Name string `json:"name"`
 	Type *Node  `json:"type"`
+}
+
+type BNF []*Decl
+
+type GoTypes struct {
+	*gengo.File
 }

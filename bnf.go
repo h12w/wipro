@@ -2,15 +2,14 @@ package wipro
 
 import (
 	"bufio"
-	"encoding/json"
 	"fmt"
 	"log"
 	"os"
 	"strings"
 )
 
-func parseBNF() []*Decl {
-	f, err := os.Open("bnf.txt")
+func ParseBNF(file string) BNF {
+	f, err := os.Open(file)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -25,26 +24,6 @@ func parseBNF() []*Decl {
 		}
 	}
 	return decls
-}
-
-func FromBNFToJSON() {
-	nodes := parseBNF()
-	fmt.Println(toJSON(nodes))
-}
-
-func FromBNFToGoJSON() {
-	goFile := FromBNFToGoFile()
-	fmt.Println(goFile.JSON())
-}
-
-func FromBNFToGo() {
-	goFile := FromBNFToGoFile()
-	goFile.Fprint(os.Stdout)
-}
-
-func toJSON(v interface{}) string {
-	buf, _ := json.MarshalIndent(v, "", "    ")
-	return string(buf)
 }
 
 func parseLine(line string) *Decl {

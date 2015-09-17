@@ -10,29 +10,28 @@ import (
 	"h12.me/gengo"
 )
 
-func FromBNFToGoFile() *gengo.File {
-	decls := parseBNF()
+func (bnf BNF) GoTypes() GoTypes {
 	declMap := make(map[string]*Decl)
-	for _, decl := range decls {
+	for _, decl := range bnf {
 		if foundDecl, ok := declMap[decl.Name]; ok && !reflect.DeepEqual(foundDecl, decl) {
 			log.Fatalf("conflict name %s:\n%#v\n%#v", decl.Name, foundDecl, decl)
 		}
 		declMap[decl.Name] = decl
 	}
-	return genGoFile(decls, declMap)
+	return genGoTypes(bnf, declMap)
 }
 
-func genGoFile(decls []*Decl, declMap map[string]*Decl) *gengo.File {
+func genGoTypes(decls BNF, declMap map[string]*Decl) GoTypes {
 	var goDecls []*gengo.TypeDecl
 	for _, decl := range decls {
 		if !decl.Type.simple() {
 			goDecls = append(goDecls, decl.GenDecl(declMap))
 		}
 	}
-	return &gengo.File{
+	return GoTypes{&gengo.File{
 		PackageName: "proto",
 		TypeDecls:   goDecls,
-	}
+	}}
 }
 
 func (n *Node) simple() bool {
@@ -85,7 +84,7 @@ func (n *Node) GenType(m map[string]*Decl) *gengo.Type {
 	case OrNode:
 		return &gengo.Type{
 			Kind:  gengo.IdentKind,
-			Ident: "T",
+			Ident: "M",
 		}
 	default:
 		return &gengo.Type{

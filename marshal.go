@@ -3,19 +3,16 @@ package wipro
 import (
 	"fmt"
 	"io"
-	"os"
 
 	"h12.me/gengo"
 )
 
-func FromBNFToGoFuncs() {
-	w := os.Stdout
-	goFile := FromBNFToGoFile()
+func (t GoTypes) GoFuncs(w io.Writer) {
 	fpl(w, "package proto")
 	fpl(w, "import (")
 	fpl(w, `"hash/crc32"`)
 	fpl(w, ")")
-	for _, decl := range goFile.TypeDecls {
+	for _, decl := range t.TypeDecls {
 		genMarshalFunc(w, decl)
 		fpl(w, "")
 		genUnmarshalFunc(w, decl)
@@ -25,7 +22,7 @@ func FromBNFToGoFuncs() {
 
 func genMarshalFunc(w io.Writer, decl *gengo.TypeDecl) {
 	t := &decl.Type
-	if t.Kind == gengo.IdentKind && t.Ident == "T" {
+	if t.Kind == gengo.IdentKind && t.Ident == "M" {
 		return
 	}
 	fpl(w, "func (t *%s) Marshal(w *Writer) {", decl.Name)
@@ -60,7 +57,7 @@ func genMarshalFunc(w io.Writer, decl *gengo.TypeDecl) {
 
 func genUnmarshalFunc(w io.Writer, decl *gengo.TypeDecl) {
 	t := &decl.Type
-	if t.Kind == gengo.IdentKind && t.Ident == "T" {
+	if t.Kind == gengo.IdentKind && t.Ident == "M" {
 		return
 	}
 	fpl(w, "func (t *%s) Unmarshal(r *Reader) {", decl.Name)
