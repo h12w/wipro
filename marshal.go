@@ -239,7 +239,10 @@ func unmarshalSizeArray(w io.Writer, name string, typ *gengo.Type) {
 	default:
 		unmarshalUnmarshaler(w, "m", typ.Ident)
 	}
+	// NOTE: server optimization, ignore err for sized array element and quit silently
 	fpl(w, "if r.Err != nil {")
+	fpl(w, "r.Err = nil")
+	fpl(w, "r.Offset = len(r.B)")
 	fpl(w, "return")
 	fpl(w, "}")
 	fpl(w, "*t = append(*t, m)")
