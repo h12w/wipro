@@ -28,23 +28,27 @@ func genMarshalFunc(w io.Writer, decl *gengo.TypeDecl) {
 	fpl(w, "func (t *%s) Marshal(w *Writer) {", decl.Name)
 	switch t.Kind {
 	case gengo.StructKind:
-		if f0 := t.Fields[0]; f0.Name == "Size" || f0.Name == "CRC" {
-			fpl(w, "offset := len(w.B)")
-			marshalField(w, t.Fields[0])
-			fpl(w, "start := len(w.B)")
-			for _, field := range t.Fields[1:] {
-				marshalField(w, field)
-			}
-			switch f0.Name {
-			case "Size":
-				fpl(w, "w.SetInt32(offset, int32(len(w.B)-start))")
-			case "CRC":
-				fpl(w, "w.SetUint32(offset, crc32.ChecksumIEEE(w.B[start:]))")
+		if len(t.Fields) > 0 {
+			if f0 := t.Fields[0]; f0.Name == "Size" || f0.Name == "CRC" {
+				fpl(w, "offset := len(w.B)")
+				marshalField(w, t.Fields[0])
+				fpl(w, "start := len(w.B)")
+				for _, field := range t.Fields[1:] {
+					marshalField(w, field)
+				}
+				switch f0.Name {
+				case "Size":
+					fpl(w, "w.SetInt32(offset, int32(len(w.B)-start))")
+				case "CRC":
+					fpl(w, "w.SetUint32(offset, crc32.ChecksumIEEE(w.B[start:]))")
+				}
+			} else {
+				for _, f := range t.Fields {
+					marshalField(w, f)
+				}
 			}
 		} else {
-			for _, f := range t.Fields {
-				marshalField(w, f)
-			}
+			fpl(w, "// no fields for type %s, %v", decl.Name, decl.Type)
 		}
 	case gengo.ArrayKind:
 		marshalValue(w, "(*t)", t, t.Ident)
@@ -64,26 +68,30 @@ func genUnmarshalFunc(w io.Writer, decl *gengo.TypeDecl) {
 	fpl(w, "func (t *%s) Unmarshal(r *Reader) {", decl.Name)
 	switch t.Kind {
 	case gengo.StructKind:
-		if f0 := t.Fields[0]; f0.Name == "Size" || f0.Name == "CRC" {
-			unmarshalField(w, t.Fields[0])
-			fpl(w, "start := r.Offset")
-			for _, field := range t.Fields[1:] {
-				unmarshalField(w, field)
-			}
-			switch f0.Name {
-			case "Size":
-				fpl(w, "if r.Err == nil && int(t.Size) != r.Offset-start {")
-				fpl(w, `r.Err = ErrSizeMismatch`)
-				fpl(w, "}")
-			case "CRC":
-				fpl(w, "if r.Err == nil && t.CRC != crc32.ChecksumIEEE(r.B[start:r.Offset]) {")
-				fpl(w, `r.Err = ErrCRCMismatch`)
-				fpl(w, "}")
+		if len(t.Fields) > 0 {
+			if f0 := t.Fields[0]; f0.Name == "Size" || f0.Name == "CRC" {
+				unmarshalField(w, t.Fields[0])
+				fpl(w, "start := r.Offset")
+				for _, field := range t.Fields[1:] {
+					unmarshalField(w, field)
+				}
+				switch f0.Name {
+				case "Size":
+					fpl(w, "if r.Err == nil && int(t.Size) != r.Offset-start {")
+					fpl(w, `r.Err = ErrSizeMismatch`)
+					fpl(w, "}")
+				case "CRC":
+					fpl(w, "if r.Err == nil && t.CRC != crc32.ChecksumIEEE(r.B[start:r.Offset]) {")
+					fpl(w, `r.Err = ErrCRCMismatch`)
+					fpl(w, "}")
+				}
+			} else {
+				for _, f := range t.Fields {
+					unmarshalField(w, f)
+				}
 			}
 		} else {
-			for _, f := range t.Fields {
-				unmarshalField(w, f)
-			}
+			fpl(w, "// no fields for type %s, %v", decl.Name, decl.Type)
 		}
 	case gengo.ArrayKind:
 		unmarshalValue(w, "(*t)", t, t.Ident)
