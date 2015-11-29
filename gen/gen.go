@@ -1,4 +1,4 @@
-package wipro
+package gen
 
 import (
 	"fmt"
@@ -18,7 +18,11 @@ func (bnf BNF) GoTypes() GoTypes {
 		}
 		declMap[decl.Name] = decl
 	}
-	return genGoTypes(bnf, declMap)
+	types := genGoTypes(bnf, declMap)
+	types.File.Imports = []*gengo.Import{
+		{Path: "h12.me/wipro"},
+	}
+	return types
 }
 
 func genGoTypes(decls BNF, declMap map[string]*Decl) GoTypes {
@@ -84,7 +88,7 @@ func (n *Node) GenType(m map[string]*Decl) *gengo.Type {
 	case OrNode:
 		return &gengo.Type{
 			Kind:  gengo.IdentKind,
-			Ident: "M",
+			Ident: "wipro.M",
 		}
 	default:
 		return &gengo.Type{

@@ -1,4 +1,4 @@
-package wipro
+package gen
 
 import (
 	"fmt"
@@ -11,6 +11,7 @@ func (t GoTypes) GoFuncs(w io.Writer) {
 	fpl(w, "package proto")
 	fpl(w, "import (")
 	fpl(w, `"hash/crc32"`)
+	fpl(w, `"h12.me/wipro"`)
 	fpl(w, ")")
 	for _, decl := range t.TypeDecls {
 		genMarshalFunc(w, decl)
@@ -25,7 +26,7 @@ func genMarshalFunc(w io.Writer, decl *gengo.TypeDecl) {
 	if t.Kind == gengo.IdentKind && t.Ident == "M" {
 		return
 	}
-	fpl(w, "func (t *%s) Marshal(w *Writer) {", decl.Name)
+	fpl(w, "func (t *%s) Marshal(w *wipro.Writer) {", decl.Name)
 	switch t.Kind {
 	case gengo.StructKind:
 		if len(t.Fields) > 0 {
@@ -65,7 +66,7 @@ func genUnmarshalFunc(w io.Writer, decl *gengo.TypeDecl) {
 	if t.Kind == gengo.IdentKind && t.Ident == "M" {
 		return
 	}
-	fpl(w, "func (t *%s) Unmarshal(r *Reader) {", decl.Name)
+	fpl(w, "func (t *%s) Unmarshal(r *wipro.Reader) {", decl.Name)
 	switch t.Kind {
 	case gengo.StructKind:
 		if len(t.Fields) > 0 {

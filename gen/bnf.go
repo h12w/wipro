@@ -1,4 +1,4 @@
-package wipro
+package gen
 
 import (
 	"bufio"
