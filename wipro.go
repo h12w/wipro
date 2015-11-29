@@ -2,15 +2,42 @@ package wipro
 
 import (
 	"errors"
+	"io"
 )
 
 var (
-	ErrUnexpectedEOF = errors.New("unexpected EOF")
+	ErrPrefix        = "proto: "
+	ErrUnexpectedEOF = errors.New(ErrPrefix + "unexpected EOF")
+	ErrConn          = errors.New(ErrPrefix + "network connection error")
 )
 
 type M interface {
 	Marshal(*Writer)
 	Unmarshal(*Reader)
+}
+
+func Send(m M, conn io.Writer) error {
+	var w Writer
+	m.Marshal(&w)
+	if _, err := conn.Write(w.B); err != nil {
+		return ErrConn
+	}
+	return nil
+}
+
+func Receive(conn io.Reader, m M) error {
+	r := Reader{B: make([]byte, 4)}
+	if _, err := conn.Read(r.B); err != nil {
+		return ErrConn
+	}
+	size := int(r.ReadInt32())
+	r.Grow(size)
+	if _, err := io.ReadAtLeast(conn, r.B[4:], size); err != nil {
+		return ErrConn
+	}
+	r.Reset()
+	m.Unmarshal(&r)
+	return r.Err
 }
 
 type Writer struct {
