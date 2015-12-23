@@ -142,12 +142,11 @@ func (w *Writer) WriteString(s string) {
 }
 
 func (r *Reader) ReadString() string {
-	l := int(r.ReadInt16())
 	if r.Err != nil {
 		return ""
 	}
-	if l < 0 {
-		r.Err = ErrUnexpectedEOF
+	l := int(r.ReadInt16())
+	if l <= 0 {
 		return ""
 	}
 	i := r.Offset
@@ -165,12 +164,11 @@ func (w *Writer) WriteBytes(bs []byte) {
 }
 
 func (r *Reader) ReadBytes() []byte {
-	l := int(r.ReadInt32())
 	if r.Err != nil {
 		return nil
 	}
-	if l < 0 {
-		r.Err = ErrUnexpectedEOF
+	l := int(r.ReadInt32())
+	if l <= 0 {
 		return nil
 	}
 	i := r.Offset
