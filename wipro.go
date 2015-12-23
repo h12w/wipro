@@ -162,6 +162,10 @@ func (w *Writer) WriteBytes(bs []byte) {
 
 func (r *Reader) ReadBytes() []byte {
 	l := int(r.ReadInt32())
+	if l < 0 {
+		r.Err = ErrUnexpectedEOF
+		return nil
+	}
 	if r.Err != nil {
 		return nil
 	}
