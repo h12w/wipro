@@ -3,12 +3,13 @@ package gen
 import (
 	"fmt"
 	"io"
+	"strings"
 
 	"h12.me/gengo"
 )
 
-func (t GoTypes) GoFuncs(w io.Writer) {
-	fpl(w, "package proto")
+func (t GoTypes) GoFuncs(w io.Writer, packageName string) {
+	fpl(w, "package "+packageName)
 	fpl(w, "import (")
 	fpl(w, `"hash/crc32"`)
 	fpl(w, `"h12.me/wipro"`)
@@ -23,7 +24,7 @@ func (t GoTypes) GoFuncs(w io.Writer) {
 
 func genMarshalFunc(w io.Writer, decl *gengo.TypeDecl) {
 	t := &decl.Type
-	if t.Kind == gengo.IdentKind && t.Ident == "M" {
+	if t.Kind == gengo.IdentKind && t.Ident == "wipro.M" {
 		return
 	}
 	fpl(w, "func (t *%s) Marshal(w *wipro.Writer) {", decl.Name)
@@ -63,7 +64,7 @@ func genMarshalFunc(w io.Writer, decl *gengo.TypeDecl) {
 
 func genUnmarshalFunc(w io.Writer, decl *gengo.TypeDecl) {
 	t := &decl.Type
-	if t.Kind == gengo.IdentKind && t.Ident == "M" {
+	if t.Kind == gengo.IdentKind && t.Ident == "wipro.M" {
 		return
 	}
 	fpl(w, "func (t *%s) Unmarshal(r *wipro.Reader) {", decl.Name)
@@ -107,7 +108,7 @@ func genUnmarshalFunc(w io.Writer, decl *gengo.TypeDecl) {
 func marshalField(w io.Writer, f *gengo.Field) {
 	fName := "t." + f.Name
 	if f.Name == "" {
-		fName = "t." + f.Type.Ident
+		fName = "t." + embeddedVarName(f.Type.Ident)
 	}
 	marshalValue(w, fName, &f.Type, f.Type.Ident)
 }
@@ -115,9 +116,14 @@ func marshalField(w io.Writer, f *gengo.Field) {
 func unmarshalField(w io.Writer, f *gengo.Field) {
 	fName := "t." + f.Name
 	if f.Name == "" {
-		fName = "t." + f.Type.Ident
+		fName = "t." + embeddedVarName(f.Type.Ident)
 	}
 	unmarshalValue(w, fName, &f.Type, f.Type.Ident)
+}
+
+func embeddedVarName(s string) string {
+	items := strings.Split(s, ".")
+	return items[len(items)-1]
 }
 
 func marshalValue(w io.Writer, name string, typ *gengo.Type, declType string) {

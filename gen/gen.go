@@ -33,8 +33,7 @@ func genGoTypes(decls BNF, declMap map[string]*Decl) GoTypes {
 		}
 	}
 	return GoTypes{&gengo.File{
-		PackageName: "proto",
-		TypeDecls:   goDecls,
+		TypeDecls: goDecls,
 	}}
 }
 
