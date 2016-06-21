@@ -8,7 +8,6 @@ import (
 var (
 	ErrPrefix        = "proto: "
 	ErrUnexpectedEOF = errors.New(ErrPrefix + "unexpected EOF")
-	ErrConn          = errors.New(ErrPrefix + "network connection error")
 )
 
 type M interface {
@@ -20,7 +19,7 @@ func Send(m M, conn io.Writer) error {
 	var w Writer
 	m.Marshal(&w)
 	if _, err := conn.Write(w.B); err != nil {
-		return ErrConn
+		return err
 	}
 	return nil
 }
@@ -28,12 +27,12 @@ func Send(m M, conn io.Writer) error {
 func Receive(conn io.Reader, m M) error {
 	r := Reader{B: make([]byte, 4)}
 	if _, err := conn.Read(r.B); err != nil {
-		return ErrConn
+		return err
 	}
 	size := int(r.ReadInt32())
 	r.Grow(size)
 	if _, err := io.ReadAtLeast(conn, r.B[4:], size); err != nil {
-		return ErrConn
+		return err
 	}
 	r.Reset()
 	m.Unmarshal(&r)
