@@ -31,8 +31,10 @@ func Receive(conn io.Reader, m M) error {
 	}
 	size := int(r.ReadInt32())
 	r.Grow(size)
-	if _, err := io.ReadAtLeast(conn, r.B[4:], size); err != nil {
-		return err
+	if size > 0 {
+		if _, err := io.ReadAtLeast(conn, r.B[4:], size); err != nil {
+			return err
+		}
 	}
 	r.Reset()
 	m.Unmarshal(&r)
@@ -194,6 +196,9 @@ func (w *Writer) SetUint32(offset int, i uint32) {
 }
 
 func (r *Reader) Grow(n int) {
+	if n <= 0 {
+		return
+	}
 	b := make([]byte, len(r.B)+n)
 	copy(b, r.B)
 	r.B = b
