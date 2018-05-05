@@ -7,7 +7,7 @@ import (
 	"reflect"
 	"strings"
 
-	"h12.me/gengo"
+	"h12.io/gengo"
 )
 
 func (bnf BNF) GoTypes() GoTypes {
@@ -20,7 +20,7 @@ func (bnf BNF) GoTypes() GoTypes {
 	}
 	types := genGoTypes(bnf, declMap)
 	types.File.Imports = []*gengo.Import{
-		{Path: "h12.me/wipro"},
+		{Path: "h12.io/wipro"},
 	}
 	return types
 }

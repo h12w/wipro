@@ -1,7 +1,7 @@
 package gen
 
 import (
-	"h12.me/gengo"
+	"h12.io/gengo"
 )
 
 type NodeType int

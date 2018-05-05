@@ -5,14 +5,14 @@ import (
 	"io"
 	"strings"
 
-	"h12.me/gengo"
+	"h12.io/gengo"
 )
 
 func (t GoTypes) GoFuncs(w io.Writer, packageName string) {
 	fpl(w, "package "+packageName)
 	fpl(w, "import (")
 	fpl(w, `"hash/crc32"`)
-	fpl(w, `"h12.me/wipro"`)
+	fpl(w, `"h12.io/wipro"`)
 	fpl(w, ")")
 	for _, decl := range t.TypeDecls {
 		genMarshalFunc(w, decl)
