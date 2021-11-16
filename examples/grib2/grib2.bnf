@@ -1,0 +1,10 @@
+Message => Section0 Section1
+
+Section0 => GRIB Reserved Discipline Edition Length
+	GRIB => bytes4
+	Reserved => bytes2
+	Discipline => uint8
+	Edition => uint8
+	Length => uint64
+
+Section1 =>

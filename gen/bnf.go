@@ -3,20 +3,15 @@ package gen
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"strings"
 )
 
-func ParseBNF(file string) BNF {
-	f, err := os.Open(file)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer f.Close()
-
+func DecodeBNF(r io.Reader) BNF {
 	var decls []*Decl
-	s := bufio.NewScanner(f)
+	s := bufio.NewScanner(r)
 	for s.Scan() {
 		line := s.Text()
 		if line != "" {
@@ -24,6 +19,16 @@ func ParseBNF(file string) BNF {
 		}
 	}
 	return decls
+}
+
+// deprecated
+func ParseBNF(file string) BNF {
+	f, err := os.Open(file)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer f.Close()
+	return DecodeBNF(f)
 }
 
 func parseLine(line string) *Decl {

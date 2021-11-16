@@ -11,7 +11,9 @@ import (
 func (t GoTypes) GoFuncs(w io.Writer, packageName string) {
 	fpl(w, "package "+packageName)
 	fpl(w, "import (")
-	fpl(w, `"hash/crc32"`)
+	if t.hasCRC() {
+		fpl(w, `"hash/crc32"`)
+	}
 	fpl(w, `"h12.io/wipro"`)
 	fpl(w, ")")
 	for _, decl := range t.TypeDecls {
@@ -20,6 +22,21 @@ func (t GoTypes) GoFuncs(w io.Writer, packageName string) {
 		genUnmarshalFunc(w, decl)
 		fpl(w, "")
 	}
+}
+
+func (t GoTypes) hasCRC() bool {
+	for _, decl := range t.TypeDecls {
+		if hasCRC(decl) {
+			return true
+		}
+	}
+	return false
+}
+
+func hasCRC(decl *gengo.TypeDecl) bool {
+	t := &decl.Type
+	return t.Kind == gengo.StructKind &&
+		len(t.Fields) > 0 && t.Fields[0].Name == "CRC"
 }
 
 func genMarshalFunc(w io.Writer, decl *gengo.TypeDecl) {
@@ -67,25 +84,26 @@ func genUnmarshalFunc(w io.Writer, decl *gengo.TypeDecl) {
 	if t.Kind == gengo.IdentKind && t.Ident == "wipro.M" {
 		return
 	}
-	fpl(w, "func (t *%s) Unmarshal(r *wipro.Reader) {", decl.Name)
+	fpl(w, "func (t *%s) Unmarshal(r wipro.Reader) {", decl.Name)
 	switch t.Kind {
 	case gengo.StructKind:
 		if len(t.Fields) > 0 {
 			if f0 := t.Fields[0]; f0.Name == "Size" || f0.Name == "CRC" {
 				unmarshalField(w, t.Fields[0])
-				fpl(w, "start := r.Offset")
+				fpl(w, "start := r.Offset()")
 				for _, field := range t.Fields[1:] {
 					unmarshalField(w, field)
 				}
 				switch f0.Name {
 				case "Size":
-					fpl(w, "if r.Err == nil && int(t.Size) != r.Offset-start {")
-					fpl(w, `r.Err = ErrSizeMismatch`)
+					fpl(w, "if r.Err() == nil && int(t.Size) != r.Offset()-start {")
+					fpl(w, `r.SetErr(ErrSizeMismatch)`)
 					fpl(w, "}")
 				case "CRC":
-					fpl(w, "if r.Err == nil && t.CRC != crc32.ChecksumIEEE(r.B[start:r.Offset]) {")
-					fpl(w, `r.Err = ErrCRCMismatch`)
-					fpl(w, "}")
+					fpl(w, "// if r.Err() == nil && t.CRC != crc32.ChecksumIEEE(r.B[start:r.Offset()]) {")
+					fpl(w, `// r.SetErr(ErrCRCMismatch)`)
+					fpl(w, "// }")
+					fpl(w, "_ = start")
 				}
 			} else {
 				for _, f := range t.Fields {
@@ -253,8 +271,8 @@ func marshalSizeArray(w io.Writer, name string, typ *gengo.Type) {
 
 func unmarshalSizeArray(w io.Writer, name string, typ *gengo.Type) {
 	fpl(w, "size := int(r.ReadInt32())")
-	fpl(w, "start := r.Offset")
-	fpl(w, "for r.Offset-start < size {")
+	fpl(w, "start := r.Offset()")
+	fpl(w, "for r.Offset()-start < size {")
 	fpl(w, "var m %s", typ.Ident)
 	switch typ.Ident {
 	case "int8", "int16", "int32", "int64", "string":
@@ -263,9 +281,8 @@ func unmarshalSizeArray(w io.Writer, name string, typ *gengo.Type) {
 		unmarshalUnmarshaler(w, "m", typ.Ident)
 	}
 	// NOTE: server optimization, ignore err for sized array element and quit silently
-	fpl(w, "if r.Err != nil {")
-	fpl(w, "r.Err = nil")
-	fpl(w, "r.Offset = len(r.B)")
+	fpl(w, "if r.Err() != nil {")
+	fpl(w, "r.SetErr(nil)")
 	fpl(w, "return")
 	fpl(w, "}")
 	fpl(w, "*t = append(*t, m)")

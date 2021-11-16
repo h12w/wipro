@@ -19,10 +19,23 @@ func (bnf BNF) GoTypes() GoTypes {
 		declMap[decl.Name] = decl
 	}
 	types := genGoTypes(bnf, declMap)
-	types.File.Imports = []*gengo.Import{
-		{Path: "h12.io/wipro"},
+	if types.hasWipro() {
+		types.File.Imports = []*gengo.Import{
+			{Path: "h12.io/wipro"},
+		}
 	}
 	return types
+}
+
+func (ts GoTypes) hasWipro() bool {
+	for _, t := range ts.TypeDecls {
+		for _, f := range t.Type.Fields {
+			if strings.Contains(f.Type.Ident, "wipro") {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func genGoTypes(decls BNF, declMap map[string]*Decl) GoTypes {
@@ -42,7 +55,7 @@ func (n *Node) simple() bool {
 		return false
 	}
 	switch n.Child[0].Value {
-	case "string", "bytes", "int8", "int16", "int32", "int64", "uint8", "uint16", "uint32", "uint64":
+	case "string", "bytes", "int8", "int16", "int32", "int64", "uint8", "uint16", "uint32", "uint64", "bytes2", "bytes4":
 		return true
 	}
 	return false
